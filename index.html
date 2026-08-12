@@ -1,18 +1,22 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0B0F14">
+
+<!-- iOS PWA Capabilities -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Signal Desk">
+
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <title>Signal Desk</title>
+
 <style>
   :root {
     --bg: #0B0F14; --surface: #121821; --surface-raised: #171F2A; --border: #232B35;
@@ -22,12 +26,11 @@
     --amber: #D4A24A; --amber-dim: rgba(212,162,74,0.12);
     --slate: #8C97A8; --swing-accent: #7C9CD4; --swing-dim: rgba(124,156,212,0.12);
   }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Space Grotesk', -apple-system, sans-serif; -webkit-font-smoothing: antialiased; min-height: 100vh; }
   .mono { font-family: 'JetBrains Mono', 'SF Mono', monospace; }
-  a { color: inherit; }
 
-  header { position: sticky; top: 0; z-index: 20; background: rgba(11,15,20,0.94); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); padding: 14px 16px 0; }
+  header { position: sticky; top: 0; z-index: 20; background: rgba(11,15,20,0.94); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); padding: calc(14px + env(safe-area-inset-top)) 16px 0; }
   .brand { display: flex; align-items: center; gap: 8px; }
   .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 0 rgba(95,191,143,0.6); animation: pulse 2.4s ease-out infinite; flex-shrink: 0; }
   .pulse.stale { background: var(--muted-2); animation: none; box-shadow: none; }
@@ -38,56 +41,37 @@
   .tabs { display: flex; gap: 4px; margin-top: 14px; }
   .tab { flex: 1; text-align: center; padding: 10px 0; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border-bottom: 2px solid transparent; cursor: pointer; }
   .tab.active { color: var(--text); border-bottom-color: var(--green); }
-  .tab .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-left: 5px; vertical-align: middle; }
   .tab.swing.active { border-bottom-color: var(--swing-accent); }
 
-  .status-strip { display: flex; gap: 8px; margin: 12px 0; overflow-x: auto; -ms-overflow-style: none; scrollbar-width: none; }
+  .status-strip { display: flex; gap: 8px; margin: 12px 0; overflow-x: auto; scrollbar-width: none; }
   .status-strip::-webkit-scrollbar { display: none; }
   .status-chip { flex: 0 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; min-width: 128px; }
   .status-chip .sym { font-weight: 700; font-size: 13px; }
-  .status-chip .badge { display: inline-block; margin-top: 4px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 5px; }
+  .status-chip .badge { display: inline-block; margin-top: 4px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 5px; }
   .badge-call { background: var(--green-dim); color: var(--green); }
   .badge-put { background: var(--red-dim); color: var(--red); }
   .badge-wait { background: var(--surface-raised); color: var(--slate); }
   .status-chip .detail { margin-top: 5px; font-size: 10.5px; color: var(--muted); line-height: 1.4; }
-  .status-chip .detail .mono { color: var(--text); }
 
-  main { padding: 4px 14px 60px; max-width: 560px; margin: 0 auto; }
+  main { padding: 4px 14px calc(60px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto; }
   .panel { display: none; }
   .panel.active { display: block; }
   .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 22px 4px 10px; }
-  .section-label:first-child { margin-top: 4px; }
-  .swing-note { font-size: 11px; color: var(--muted); background: var(--surface); border: 1px dashed var(--border); border-radius: 8px; padding: 9px 11px; margin: 4px 0 16px; line-height: 1.5; }
 
-  .card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--slate); border-radius: 10px; padding: 13px 14px; margin-bottom: 10px; animation: fadein 0.35s ease; }
-  @keyframes fadein { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
-  .card.call { border-left-color: var(--green); } .card.put { border-left-color: var(--red); }
-  .card.win { border-left-color: var(--green); } .card.loss { border-left-color: var(--red); } .card.flat { border-left-color: var(--amber); }
-  .card-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-  .card-title { font-weight: 700; font-size: 13.5px; letter-spacing: 0.02em; }
-  .card-title .arrow { opacity: 0.75; font-weight: 400; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--slate); border-radius: 10px; padding: 13px 14px; margin-bottom: 10px; }
+  .card.call, .card.win { border-left-color: var(--green); } 
+  .card.put, .card.loss { border-left-color: var(--red); } 
+  .card.flat { border-left-color: var(--amber); }
+  .card-top { display: flex; justify-content: space-between; align-items: baseline; }
+  .card-title { font-weight: 700; font-size: 13.5px; }
   .card-symbol { color: var(--muted); font-weight: 500; }
-  .strength-tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 5px; white-space: nowrap; }
-  .side-tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: 5px; vertical-align: middle; }
-  .side-tag.sell { background: var(--amber-dim); color: var(--amber); }
-  .strength-strong { background: var(--green-dim); color: var(--green); }
-  .strength-moderate { background: var(--amber-dim); color: var(--amber); }
-  .strength-weak { background: var(--red-dim); color: var(--red); }
-  .contract-line { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--muted); margin-top: 5px; word-break: break-all; }
   .figures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 11px; }
-  .fig-label { font-size: 9.5px; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; }
+  .fig-label { font-size: 9.5px; color: var(--muted); text-transform: uppercase; }
   .fig-value { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; margin-top: 2px; }
   .fig-value.up { color: var(--green); } .fig-value.down { color: var(--red); }
-  .meta-row { display: flex; justify-content: space-between; align-items: center; margin-top: 11px; padding-top: 9px; border-top: 1px solid var(--border); }
-  .size-note { font-size: 11px; color: var(--muted); }
-  .size-note .mono { color: var(--text); }
-  .timestamp { font-size: 10.5px; color: var(--muted-2); font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
 
-  .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 46px 20px; line-height: 1.6; }
-  .empty .big { font-size: 26px; display: block; margin-bottom: 8px; }
-  .error-box { background: var(--red-dim); border: 1px solid var(--red); border-radius: 10px; padding: 14px; color: var(--red); font-size: 12.5px; line-height: 1.5; }
-  .preview-banner { background: var(--amber-dim); border: 1px solid var(--amber); color: var(--amber); font-size: 11.5px; text-align: center; padding: 7px; border-radius: 8px; margin: 0 14px 4px; }
-  .install-banner { background: var(--swing-dim); border: 1px solid var(--swing-accent); color: var(--swing-accent); font-size: 11.5px; text-align: center; padding: 8px; border-radius: 8px; margin: 10px 14px 0; cursor: pointer; }
+  .install-banner { background: var(--swing-dim); border: 1px solid var(--swing-accent); color: var(--swing-accent); font-size: 12px; font-weight: 600; text-align: center; padding: 10px; border-radius: 8px; margin: 10px 14px 0; cursor: pointer; display: none; }
+  .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 46px 20px; }
 </style>
 </head>
 <body>
@@ -101,125 +85,32 @@
   </div>
 </header>
 
-<div id="previewBanner"></div>
-<div class="install-banner" id="installBanner" style="display:none" onclick="promptInstall()">📲 Install Signal Desk to your home screen</div>
+<div class="install-banner" id="installBanner" onclick="promptInstall()">📲 Install Signal Desk App</div>
 
 <main>
   <div class="panel active" id="panelIntraday">
     <div class="status-strip" id="statusStrip"></div>
-    <div class="section-label">Open now</div>
+    <div class="section-label">Open Trades</div>
     <div id="openFeed"><div class="empty">Loading…</div></div>
-    <div class="section-label">Alert history</div>
+    <div class="section-label">Alert History</div>
     <div id="historyFeed"></div>
   </div>
 
   <div class="panel" id="panelSwing">
     <div class="status-strip" id="statusStripSwing"></div>
-    <div class="section-label">Open now</div>
+    <div class="section-label">Open Trades</div>
     <div id="openFeedSwing"><div class="empty">Loading…</div></div>
-    <div class="section-label">Alert history</div>
+    <div class="section-label">Alert History</div>
     <div id="historyFeedSwing"></div>
   </div>
 </main>
 
 <script>
-  // ==== CONFIG — paste your deployed Signal Desk WebApp URL below, ending in ?format=json ====
-  const DATA_URL = "https://script.google.com/macros/s/AKfycby1rnOfH3KukUQKUgWxtpKP3vnVQ30AYdPNRo3ZmmbmM_4aE06dQv8O3_Je6RmluVjm/exec?format=json";
+  const DATA_URL = "PASTE_YOUR_WEBAPP_URL_HERE?format=json";
   const REFRESH_MS = 45000;
 
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
-  function fmtNum(n, d) { if (n === null || n === undefined || isNaN(n)) return '—'; return Number(n).toLocaleString(undefined, { minimumFractionDigits: d || 0, maximumFractionDigits: d || 2 }); }
-  function fmtPct(n) { if (n === null || n === undefined || isNaN(n)) return '—'; const v = (n * (Math.abs(n) <= 1 ? 100 : 1)); return (v >= 0 ? '+' : '') + v.toFixed(1) + '%'; }
-  function fmtTime(iso) { if (!iso) return ''; const d = new Date(iso); if (isNaN(d.getTime())) return ''; const now = new Date(); const sameDay = d.toDateString() === now.toDateString(); const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }); if (sameDay) return time; return d.toLocaleDateString(undefined, { day: '2-digit', month: 'short' }) + ' · ' + time; }
-  function relTime(iso) { if (!iso) return ''; const ms = Date.now() - new Date(iso).getTime(); if (isNaN(ms)) return ''; const m = Math.floor(ms / 60000); if (m < 1) return 'just now'; if (m < 60) return m + 'm ago'; const h = Math.floor(m / 60); if (h < 24) return h + 'h ago'; return Math.floor(h / 24) + 'd ago'; }
-  function strengthTag(label, score) { if (!label) return ''; const cls = label === 'STRONG' ? 'strength-strong' : label === 'WEAK' ? 'strength-weak' : 'strength-moderate'; return '<span class="strength-tag ' + cls + '">' + esc(label) + (score != null ? ' ' + Math.round(score) : '') + '</span>'; }
-
-  function signalCard(t, isSwing) {
-    const isShort = t.positionSide === 'SHORT';
-    const dirClass = t.direction === 'CALL' ? 'call' : 'put';
-    const arrow = t.direction === 'CALL' ? '↑' : '↓';
-    const strikeTxt = t.shortStrike ? fmtNum(t.strikePrice) + ' / ' + fmtNum(t.shortStrike) + ' (spread)' : fmtNum(t.strikePrice);
-    const ageTxt = isSwing && t.trendAgeDays != null ? ' · trend ' + t.trendAgeDays + 'd old' : '';
-    // A short position's SL/TP are numerically the mirror image of a long's (SL above entry,
-    // TP below) — same convention already used in the Telegram alerts, just applied here too.
-    const sideTag = isShort ? '<span class="side-tag sell">SELL</span>' : '';
-    return '' +
-      '<div class="card ' + dirClass + '">' +
-        '<div class="card-top"><div class="card-title">' + arrow + ' ' + esc(t.direction) + sideTag + ' <span class="card-symbol">· ' + esc(t.symbol) + (isSwing ? ' · SWING' : '') + '</span></div>' + strengthTag(t.strengthLabel, t.strength) + '</div>' +
-        '<div class="contract-line">' + esc(t.contractSymbol) + ' · strike ' + strikeTxt + ageTxt + '</div>' +
-        '<div class="figures">' +
-          '<div><div class="fig-label">' + (isShort ? 'Entry (collect)' : 'Entry') + '</div><div class="fig-value mono">' + fmtNum(t.entryPremium, 2) + '</div></div>' +
-          '<div><div class="fig-label">Stoploss</div><div class="fig-value mono down">' + fmtNum(t.stoploss, 2) + '</div></div>' +
-          '<div><div class="fig-label">Take Profit</div><div class="fig-value mono up">' + fmtNum(t.takeProfit, 2) + '</div></div>' +
-        '</div>' +
-        '<div class="meta-row"><div class="size-note">Size <span class="mono">' + (t.suggestedContracts == null ? '—' : t.suggestedContracts) + '</span> contract(s)' + (t.riskAmount != null ? ' · risks ~$' + fmtNum(t.riskAmount, 0) : '') + '</div><div class="timestamp">' + fmtTime(t.signalTime) + '</div></div>' +
-      '</div>';
-  }
-
-  function closeCard(t, isSwing) {
-    const isShort = t.positionSide === 'SHORT';
-    const isWin = t.result === 'TP_HIT'; const isFlat = t.result === 'SQUARED_OFF';
-    const cls = isFlat ? 'flat' : (isWin ? 'win' : 'loss');
-    const label = isWin ? '🎯 TARGET HIT' : isFlat ? '🕐 SQUARED OFF' : '⛔ STOPLOSS HIT';
-    const closeAction = isShort ? ' (BUY TO CLOSE)' : '';
-    const pnlClass = (t.pnl == null) ? '' : (t.pnl >= 0 ? 'up' : 'down');
-    return '' +
-      '<div class="card ' + cls + '">' +
-        '<div class="card-top"><div class="card-title">' + label + closeAction + ' <span class="card-symbol">· ' + esc(t.symbol) + ' ' + esc(t.direction) + (isSwing ? ' · SWING' : '') + '</span></div></div>' +
-        '<div class="contract-line">' + esc(t.contractSymbol) + '</div>' +
-        '<div class="figures">' +
-          '<div><div class="fig-label">Entry</div><div class="fig-value mono">' + fmtNum(t.entryPremium, 2) + '</div></div>' +
-          '<div><div class="fig-label">Exit</div><div class="fig-value mono">' + fmtNum(t.exitPremium, 2) + '</div></div>' +
-          '<div><div class="fig-label">PnL</div><div class="fig-value mono ' + pnlClass + '">' + fmtNum(t.pnl, 2) + '</div></div>' +
-        '</div>' +
-        '<div class="meta-row"><div class="size-note">PnL <span class="mono ' + pnlClass + '">' + fmtPct(t.pnlPercent) + '</span></div><div class="timestamp">' + fmtTime(t.exitTime) + '</div></div>' +
-      '</div>';
-  }
-
-  function statusChip(s) {
-    const status = s.status || '';
-    const isCall = status.indexOf('CALL SIGNAL FIRED') !== -1;
-    const isPut = status.indexOf('PUT SIGNAL FIRED') !== -1;
-    const badgeClass = isCall ? 'badge-call' : isPut ? 'badge-put' : 'badge-wait';
-    const badgeText = isCall ? 'CALL' : isPut ? 'PUT' : 'WATCHING';
-    return '' +
-      '<div class="status-chip"><div class="sym">' + esc(s.symbol) + '</div><span class="badge ' + badgeClass + '">' + badgeText + '</span>' +
-      '<div class="detail">Spot <span class="mono">' + fmtNum(s.spotPrice) + '</span> · RSI <span class="mono">' + fmtNum(s.rsi, 1) + '</span> · ADX <span class="mono">' + fmtNum(s.adx, 1) + '</span></div></div>';
-  }
-
-  function renderFeed(openEl, historyEl, openTrades, recentTrades, isSwing) {
-    openEl.innerHTML = (openTrades && openTrades.length)
-      ? openTrades.map(function (t) { return signalCard(t, isSwing); }).join('')
-      : '<div class="empty"><span class="big">·</span>Nothing open right now.</div>';
-    const events = [];
-    (recentTrades || []).forEach(function (t) {
-      events.push({ time: t.signalTime, html: signalCard(t, isSwing) });
-      if (t.result && t.result !== 'OPEN') events.push({ time: t.exitTime || t.signalTime, html: closeCard(t, isSwing) });
-    });
-    events.sort(function (a, b) { return new Date(b.time) - new Date(a.time); });
-    historyEl.innerHTML = events.length ? events.map(function (e) { return e.html; }).join('') : '<div class="empty"><span class="big">·</span>No alerts yet.</div>';
-  }
-
-  function render(data) {
-    document.getElementById('refreshedAt').textContent = 'updated ' + relTime(data.generatedAt);
-    document.getElementById('pulseDot').classList.remove('stale');
-    const strip = document.getElementById('statusStrip');
-    strip.innerHTML = (data.snapshots || []).map(statusChip).join('') || '<div class="status-chip"><div class="detail">No Market_Snapshot data yet.</div></div>';
-    const stripSwing = document.getElementById('statusStripSwing');
-    stripSwing.innerHTML = (data.swingSnapshots || []).map(statusChip).join('') || '<div class="status-chip"><div class="detail">No Swing_Snapshot data yet — run "SWING: Run Signal Engine Now" once.</div></div>';
-    renderFeed(document.getElementById('openFeed'), document.getElementById('historyFeed'), data.openTrades, data.recentTrades, false);
-    renderFeed(document.getElementById('openFeedSwing'), document.getElementById('historyFeedSwing'), data.openSwingTrades, data.recentSwingTrades, true);
-  }
-
-  function showError(msg) {
-    document.getElementById('refreshedAt').textContent = 'connection issue';
-    document.getElementById('pulseDot').classList.add('stale');
-    document.getElementById('openFeed').innerHTML = '<div class="error-box">Couldn\'t load dashboard data.<br>' + esc(msg) + '</div>';
-    document.getElementById('historyFeed').innerHTML = '';
-    document.getElementById('statusStripSwing').innerHTML = '';
-    document.getElementById('openFeedSwing').innerHTML = '';
-    document.getElementById('historyFeedSwing').innerHTML = '';
-  }
+  function fmtNum(n, d) { return (n == null || isNaN(n)) ? '—' : Number(n).toLocaleString(undefined, { minimumFractionDigits: d || 0, maximumFractionDigits: d || 2 }); }
+  function fmtPct(n) { if (n == null || isNaN(n)) return '—'; const v = (n * (Math.abs(n) <= 1 ? 100 : 1)); return (v >= 0 ? '+' : '') + v.toFixed(1) + '%'; }
 
   function switchTab(which) {
     document.getElementById('tabIntraday').classList.toggle('active', which === 'intraday');
@@ -228,55 +119,35 @@
     document.getElementById('panelSwing').classList.toggle('active', which === 'swing');
   }
 
-  async function load() {
-    if (!DATA_URL || DATA_URL.indexOf('PASTE_') === 0) { renderPreview(); return; }
-    try {
-      const res = await fetch(DATA_URL);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      render(data);
-    } catch (err) {
-      showError(String(err));
-    }
-  }
+  // --- Mobile PWA Service Worker & Installation Logic ---
+  let deferredPrompt = null;
 
-  function renderPreview() {
-    document.getElementById('previewBanner').innerHTML = '<div class="preview-banner">PREVIEW — sample data. Paste your WebApp URL into DATA_URL to see your real signals.</div>';
-    const now = Date.now(); const iso = (mAgo) => new Date(now - mAgo * 60000).toISOString();
-    render({
-      generatedAt: new Date().toISOString(),
-      snapshots: [
-        { symbol: 'BTC', spotPrice: 64254.5, rsi: 61.4, adx: 31.2, status: 'CALL SIGNAL FIRED @ C-BTC-64500-050826 (STRONG 82/100)' },
-        { symbol: 'ETH', spotPrice: 3180.2, rsi: 44.0, adx: 22.1, status: 'Watching — trend BEARISH, RSI 44.0, no trigger yet' }
-      ],
-      openTrades: [{ signalTime: iso(12), symbol: 'BTC', direction: 'CALL', contractSymbol: 'PS-BTC-64500-63500-050826', strikePrice: 64500, shortStrike: 63500, entryPremium: 210, stoploss: 315, takeProfit: 105, strength: 82, strengthLabel: 'STRONG', suggestedContracts: 8, riskAmount: 15, result: 'OPEN', positionSide: 'SHORT' }],
-      recentTrades: [{ signalTime: iso(310), exitTime: iso(180), symbol: 'ETH', direction: 'PUT', contractSymbol: 'P-ETH-3150-040826', entryPremium: 18, exitPremium: 27, pnl: 9, pnlPercent: 0.5, strength: 65, strengthLabel: 'MODERATE', result: 'TP_HIT', positionSide: 'LONG' }],
-      swingSnapshots: [
-        { symbol: 'BTC', spotPrice: 64200, rsi: 55.1, adx: 25.3, status: 'Watching — no trigger yet' },
-        { symbol: 'ETH', spotPrice: 3105.4, rsi: 48.2, adx: 19.8, status: 'Watching — trend too weak (ADX 19.8 < 20)' }
-      ],
-      openSwingTrades: [{ signalTime: iso(600), symbol: 'ETH', direction: 'PUT', contractSymbol: 'P-ETH-3100-140826', strikePrice: 3100, entryPremium: 45, stoploss: 27, takeProfit: 76.5, strength: 75, strengthLabel: 'STRONG', suggestedContracts: 3, riskAmount: 20, result: 'OPEN', trendAgeDays: 2, positionSide: 'LONG' }],
-      recentSwingTrades: [{ signalTime: iso(600), symbol: 'ETH', direction: 'PUT', contractSymbol: 'P-ETH-3100-140826', strikePrice: 3100, entryPremium: 45, stoploss: 27, takeProfit: 76.5, strength: 75, strengthLabel: 'STRONG', suggestedContracts: 3, riskAmount: 20, result: 'OPEN', trendAgeDays: 2, positionSide: 'LONG' }]
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('PWA SW registered successfully'))
+        .catch(err => console.error('PWA SW registration failed:', err));
     });
   }
 
-  // --- PWA: service worker + install prompt ---
-  let deferredInstallPrompt = null;
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function () { navigator.serviceWorker.register('./sw.js').catch(function (e) { console.log('SW registration failed', e); }); });
-  }
-  window.addEventListener('beforeinstallprompt', function (e) {
+  window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
-    deferredInstallPrompt = e;
+    deferredPrompt = e;
     document.getElementById('installBanner').style.display = 'block';
   });
+
   function promptInstall() {
     document.getElementById('installBanner').style.display = 'none';
-    if (deferredInstallPrompt) { deferredInstallPrompt.prompt(); deferredInstallPrompt = null; }
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('User installed the PWA');
+        }
+        deferredPrompt = null;
+      });
+    }
   }
-
-  load();
-  setInterval(load, REFRESH_MS);
 </script>
 </body>
 </html>
