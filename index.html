@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0B0F14">
 
-<!-- iOS PWA Capabilities -->
+<!-- iOS PWA Meta Tags -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Signal Desk">
 
-<link rel="manifest" href="./manifest.json">
-<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -70,7 +70,7 @@
   .fig-value { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; margin-top: 2px; }
   .fig-value.up { color: var(--green); } .fig-value.down { color: var(--red); }
 
-  .install-banner { background: var(--swing-dim); border: 1px solid var(--swing-accent); color: var(--swing-accent); font-size: 12px; font-weight: 600; text-align: center; padding: 10px; border-radius: 8px; margin: 10px 14px 0; cursor: pointer; display: none; }
+  .install-banner { background: var(--swing-dim); border: 1px solid var(--swing-accent); color: var(--swing-accent); font-size: 12px; font-weight: 600; text-align: center; padding: 12px; border-radius: 8px; margin: 10px 14px 0; cursor: pointer; display: none; }
   .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 46px 20px; }
 </style>
 </head>
@@ -110,7 +110,6 @@
   const REFRESH_MS = 45000;
 
   function fmtNum(n, d) { return (n == null || isNaN(n)) ? '—' : Number(n).toLocaleString(undefined, { minimumFractionDigits: d || 0, maximumFractionDigits: d || 2 }); }
-  function fmtPct(n) { if (n == null || isNaN(n)) return '—'; const v = (n * (Math.abs(n) <= 1 ? 100 : 1)); return (v >= 0 ? '+' : '') + v.toFixed(1) + '%'; }
 
   function switchTab(which) {
     document.getElementById('tabIntraday').classList.toggle('active', which === 'intraday');
@@ -119,34 +118,52 @@
     document.getElementById('panelSwing').classList.toggle('active', which === 'swing');
   }
 
-  // --- Mobile PWA Service Worker & Installation Logic ---
+  // --- PWA Installation Handler ---
   let deferredPrompt = null;
+  const installBanner = document.getElementById('installBanner');
 
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
-        .then(reg => console.log('PWA SW registered successfully'))
-        .catch(err => console.error('PWA SW registration failed:', err));
-    });
+  // Check if app is already running as PWA
+  const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+  // iOS Safari detection
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+  if (!isPWA) {
+    if (isIOS) {
+      // Show iOS manual instructions banner
+      installBanner.innerHTML = "📲 Tap Share (⬆️) and select 'Add to Home Screen'";
+      installBanner.style.display = 'block';
+    } else {
+      // Listen for Android/Desktop install prompt
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        installBanner.innerHTML = "📲 Install Signal Desk App";
+        installBanner.style.display = 'block';
+      });
+    }
   }
 
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    document.getElementById('installBanner').style.display = 'block';
-  });
-
   function promptInstall() {
-    document.getElementById('installBanner').style.display = 'none';
     if (deferredPrompt) {
+      installBanner.style.display = 'none';
       deferredPrompt.prompt();
-      deferredPrompt.userChoice.then((choiceResult) => {
-        if (choiceResult.outcome === 'accepted') {
-          console.log('User installed the PWA');
+      deferredPrompt.userChoice.then((choice) => {
+        if (choice.outcome === 'accepted') {
+          console.log('PWA Installed');
         }
         deferredPrompt = null;
       });
     }
+  }
+
+  // Register Service Worker
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then((reg) => console.log('SW Registered'))
+        .catch((err) => console.error('SW Registration Failed:', err));
+    });
   }
 </script>
 </body>
