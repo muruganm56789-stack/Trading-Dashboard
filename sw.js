@@ -2,55 +2,58 @@
  * sw.js — Signal Desk PWA Service Worker
  */
 
-const SHELL_CACHE = 'signal-desk-shell-v2';
-const SHELL_FILES = ['./', './index.html', './manifest.json'];
+const SHELL_CACHE = 'signal-desk-v3';
+const SHELL_FILES = [
+  './',
+  './index.html',
+  './manifest.json'
+];
 
-self.addEventListener('install', function (event) {
+// Install Event
+self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(SHELL_CACHE).then(function (cache) { 
-      return cache.addAll(SHELL_FILES); 
+    caches.open(SHELL_CACHE).then((cache) => {
+      return cache.addAll(SHELL_FILES);
     })
   );
   self.skipWaiting();
 });
 
-self.addEventListener('activate', function (event) {
+// Activate Event
+self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then(function (names) {
+    caches.keys().then((keys) => {
       return Promise.all(
-        names.filter(function (n) { return n !== SHELL_CACHE; }).map(function (n) { return caches.delete(n); })
+        keys.filter((key) => key !== SHELL_CACHE).map((key) => caches.delete(key))
       );
     })
   );
   self.clients.claim();
 });
 
-function isShellRequest(url, selfOrigin) {
-  let u;
-  try { u = new URL(url); } catch (e) { return false; }
-  if (u.origin !== selfOrigin) return false; // Never cache Google Apps Script API endpoints
-  return /\.(html|css|js|json|png|svg|ico)$/.test(u.pathname) || u.pathname === '/' || u.pathname.endsWith('/');
-}
-
-self.addEventListener('fetch', function (event) {
+// Fetch Event — Network-first for live data API, Cache-first for App Shell
+self.addEventListener('fetch', (event) => {
   const req = event.request;
+  
   if (req.method !== 'GET') return;
 
-  if (!isShellRequest(req.url, self.location.origin)) {
-    return; // Pass data API calls directly to the network
+  // Never cache Google Apps Script API calls
+  if (req.url.includes('script.google.com') || req.url.includes('format=json')) {
+    return;
   }
 
   event.respondWith(
-    caches.open(SHELL_CACHE).then(function (cache) {
-      return cache.match(req).then(function (cached) {
-        const network = fetch(req).then(function (res) {
-          if (res && res.ok) cache.put(req, res.clone());
-          return res;
-        }).catch(function () { return cached; });
-        return cached || network;
+    caches.open(SHELL_CACHE).then((cache) => {
+      return cache.match(req).then((cachedResponse) => {
+        const fetchPromise = fetch(req).then((networkResponse) => {
+          if (networkResponse && networkResponse.ok) {
+            cache.put(req, networkResponse.clone());
+          }
+          return networkResponse;
+        }).catch(() => cachedResponse);
+
+        return cachedResponse || fetchPromise;
       });
     })
   );
 });
-
-if (typeof module !== 'undefined') module.exports = { isShellRequest };
